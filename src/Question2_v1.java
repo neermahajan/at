@@ -6,56 +6,110 @@ import java.util.HashSet;
 import java.util.Stack;
 
 import javax.json.*;
-import javax.json.stream.JsonParsingException;
+
+/****
+ * Description : This class reads Directed  graph structure from JSON objects, builds the graph, and finds the list 
+ * of nodes which does not have a direct path to the root, if an edge is deleted.
+ * author: Neha Mahajan
+ * Version: 1
+ * Date : 	02/25/2017
+ ****/
 
 public class Question2_v1 {
 
+	/*
+	 *  Each edge in a graph has a start node and end node.
+	 *  The HashMap stores edges in the graph using key-value pairs
+	 *  key{Integer}  "From" Node 
+	 *  value{Set of integers} set of neighbor nodes ("To" nodes)
+	 */
 	private HashMap<Integer, HashSet<Integer>> adjacencyList = new HashMap<Integer, HashSet<Integer>>();
-	private HashMap<String, Integer> nodeNameToIndexMapping = new HashMap<String, Integer>();
+	
+	
+	// Store the nodes in an array so that all operations can be done using the corresponding index
 	private ArrayList<String> indexToNodeName = new ArrayList<String>();
+	
+	/*
+	 * Create a HashMap of nodes. This map manages mapping of node names to index.
+	 * key{String} nodeName
+	 * value{Integer} index which is generated sequentially
+	 */
+	private HashMap<String, Integer> nodeNameToIndexMapping = new HashMap<String, Integer>();
+	
+	// Index of the root node
 	private int root = 0;
+	
+	// Boolean array to check if a node is visited during depth-first search algorithm
 	private boolean visited[];
+	
+	// Counter for nodes
 	private int nodeCounter = 0;
 	
 	public static void main(String[] args) {
 		Question2_v1 q2 = new Question2_v1();
-		q2.readJSonObject();
+		
+		// Read the input, parse it, creates graph and finds orphan nodes.
+		q2.readInputDataFileAndParseIt();
 	}
 
-	private void readJSonObject() {
+	/*
+	 *  Read the json object from the input file.
+	 */
+	private void readInputDataFileAndParseIt() {
+		
+		System.out.println("Loading input file..\n");
+		String filename = "./datasource/example1_json.txt";
 		JsonReader reader = null;
 		JsonObject graphObject = null;
 		try {
-			reader = Json.createReader(new FileReader("src/question2json.txt"));
+			reader = Json.createReader(new FileReader(filename));
 			graphObject = reader.readObject();
 			
+			// Parses JSON objects to generate graph and modify it as per input nodes.
 			parseData(graphObject);
+			
+			// Depth first search to find all the nodes that do not have a directed path to root
 			dfsStack();
+			
+			// Retrieve node names using the visited array and nodes array list.
 			getDanglingNodes();
+			
 		} catch (FileNotFoundException e) {
-			System.out.println("File does not exists");
-		} catch(JsonParsingException jpse){
-			System.out.println("Error while parsing data");
-			System.out.println(jpse);
-        }catch(JsonException je){
-        	System.out.println(je);
-        }finally{
+			System.out.println("Input file at path" + filename + " does not exists");
+			System.out.println("Exiting the program");
+		} catch (Exception e) {
+        	System.out.println("File could not be sucessfully parsed.Below are the details:");
+			System.out.print(e);
+			System.out.println("\tAt Line number: " + e.getStackTrace()[0].getLineNumber());
+			System.out.println("Exiting the program");
+		} finally{
         	if(reader != null)
         		reader.close();
         }
 	}
 
-	private void parseData(JsonObject graphObject) {
+	/*
+	 * Parse the json object to read the edges, nodes and root of the graph
+	 * and store them into the HashMap.
+	 * @param  graphObject  JSON object containing nodes, edges, root and deleted edge key-attribute pairs.
+	 * @return void
+	 */
+	private void parseData(JsonObject graphObject) throws Exception{
 		JsonObject object;
-		JsonArray nodes = graphObject.getJsonArray("nodes");
 		String nodeName = "";
 		int toIndex = 0;
         int fromIndex = 0;
-        HashSet<Integer> temp = null;
+        String to, from = "";
         
+        HashSet<Integer> currentHashSet = null;
+        
+        // Fetch the list of nodes from JSON array
+        JsonArray nodes = graphObject.getJsonArray("nodes");
         for (JsonValue jsonValue : nodes) {
         	object = (JsonObject) jsonValue;
         	nodeName = object.getString("id");
+        	
+        	// If node is not already added, add the node to the nodes list.
         	if(!nodeNameToIndexMapping.containsKey(nodeName)){
         		nodeNameToIndexMapping.put(nodeName, nodeCounter);
         		indexToNodeName.add(nodeName);
@@ -63,43 +117,89 @@ public class Question2_v1 {
         	}
         }
         
+        // Initialize root node.
         root = nodeNameToIndexMapping.get(graphObject.getString("root"));
         
+        // get the edges
+        // reverse the edges for the dfs algorithm
         JsonArray edges = graphObject.getJsonArray("edges");
         for (JsonValue jsonValue : edges) {
         	object = (JsonObject) jsonValue;
-        	toIndex = nodeNameToIndexMapping.get(object.getString("to"));
-        	fromIndex = nodeNameToIndexMapping.get(object.getString("from"));
         	
-        	if(!adjacencyList.containsKey(toIndex)){
-        		adjacencyList.put(toIndex, new HashSet<Integer>());
+        	to = object.getString("to");
+        	from = object.getString("from");
+        	toIndex = -1;
+        	fromIndex = -1;
+        	
+        	if(nodeNameToIndexMapping.containsKey(to))
+        		toIndex = nodeNameToIndexMapping.get(to);
+        	
+    		if(nodeNameToIndexMapping.containsKey(from))
+    			fromIndex = nodeNameToIndexMapping.get(from);
+        	
+    		// Add the edge only if the to and from nodes are valid.
+        	if(toIndex != -1 && fromIndex != -1){
+	        	if(!adjacencyList.containsKey(toIndex)){
+	        		// Create new entry for the node in the hash map that will store
+	        		// a set of all the end nodes. 
+	        		adjacencyList.put(toIndex, new HashSet<Integer>());
+	        	}
+	        	
+	        	currentHashSet = adjacencyList.get(toIndex);
+	        	currentHashSet.add(fromIndex);
+	        	adjacencyList.put(toIndex, currentHashSet);
+        	}else{
+        		if(toIndex == -1)
+        			System.out.println("Node >>> " + to + " does not exists in the graph");
+
+        		if(fromIndex == -1)
+        			System.out.println("Node >>> " + from + " does not exists in the graph");
         	}
-        	
-        	temp = adjacencyList.get(toIndex);
-        	temp.add(fromIndex);
-        	adjacencyList.put(toIndex, temp);
         }
         
         //printGraph();
         
+        //get the deleted edges
         JsonArray deletedEdges = graphObject.getJsonArray("deletedEdge");
         for (JsonValue jsonValue : deletedEdges) {
         	object = (JsonObject) jsonValue;
-        	toIndex = nodeNameToIndexMapping.get(object.getString("to"));
-        	fromIndex = nodeNameToIndexMapping.get(object.getString("from"));
+        	
+        	to = object.getString("to");
+        	from = object.getString("from");
+        	toIndex = -1;
+        	fromIndex = -1;
+        	
+        	if(nodeNameToIndexMapping.containsKey(to))
+        		toIndex = nodeNameToIndexMapping.get(to);
+        	
+    		if(nodeNameToIndexMapping.containsKey(from))
+    			fromIndex = nodeNameToIndexMapping.get(from);
         	
         	if(toIndex != -1 && fromIndex != -1){
-        		temp = adjacencyList.get(toIndex);
-            	temp.remove(fromIndex);
-            	adjacencyList.put(toIndex, temp);
+        		currentHashSet = adjacencyList.get(toIndex);
+        		if(currentHashSet != null){
+        			currentHashSet.remove(fromIndex);
+        			adjacencyList.put(toIndex, currentHashSet);
+        		}
+        	}else{
+        		if(toIndex == -1)
+        			System.out.println("Node >>> " + to + " does not exists in the graph");
+        		else if(fromIndex == -1)
+        			System.out.println("Node >>> " + from + " does not exists in the graph");
+        		else
+        			System.out.println("The edge to be deleted does not exists in the graph");
         	}
         }
         
-        System.out.println("After edges removed");
-        
+        //System.out.println("After edges removed");
         //printGraph();
 	}
 
+	/*
+	 * Display the graph with edges and node.
+	 * @param  none
+	 * @return void
+	 */
 	private void printGraph() {
 		System.out.println("Node names to Index Mapping\n");
 		for(String key: nodeNameToIndexMapping.keySet()){
@@ -121,6 +221,17 @@ public class Question2_v1 {
 		}
 	}
 	
+	/*
+	 * Check whether the nodes in the graph are reachable from the root.
+	 * Algorithm functionality: We need to find a path from each node to root
+	 * to check if a node is not an orphan node. Instead of finding a path from
+	 * each node to root, the edges in the graph are reversed and the depth first
+	 * search algorithm marks all the nodes reachable from the root.
+	 * The nodes which are not reachable are the orphan nodes in the original graph.
+	 * (i.e. there is no path from the node to the root)
+	 * @param  none
+	 * @return void
+	 */
 	private void dfsStack(){
 		visited = new boolean[nodeNameToIndexMapping.size()];
 		Stack<Integer> stack = new Stack<Integer>();
@@ -142,20 +253,28 @@ public class Question2_v1 {
 		}
 	}
 	
+	/*
+	 * Print the nodes which do not have path back to the root.
+	 * @param  none
+	 * @return void
+	 */
 	private void getDanglingNodes(){
-		System.out.println();
-		System.out.println("List of dangling nodes");
+		System.out.println("***********************OUTPUT*********************\n");
+		
 		ArrayList<String> danglingNodes = new ArrayList<String>(); 
+		// prepare a list of dangling Nodes
 		for(int i = 0; i < visited.length; i++){
 			if(visited[i] == false)
 				danglingNodes.add(indexToNodeName.get(i));
 		}
 		
+		// the list of dangling nodes is printed.
 		if(danglingNodes.size() == 0){
-			System.out.println("No dangling nodes");
+			System.out.println("No orphan nodes exists in the graph");
 		}else{
-			for(String temp: danglingNodes){
-				System.out.print(temp + " ");
+			System.out.println("The orphan nodes in the graph are");
+			for(String nodeName: danglingNodes){
+				System.out.print(nodeName + " ");
 			}
 		}
 	}
