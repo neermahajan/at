@@ -15,7 +15,7 @@ import javax.json.*;
  * Date : 	02/25/2017
  ****/
 
-public class Question2_v1 {
+public class FindOrphanNodes {
 
 	/*
 	 *  Each edge in a graph has a start node and end node.
@@ -46,10 +46,10 @@ public class Question2_v1 {
 	private int nodeCounter = 0;
 	
 	public static void main(String[] args) {
-		Question2_v1 q2 = new Question2_v1();
+		FindOrphanNodes fon = new FindOrphanNodes();
 		
 		// Read the input, parse it, creates graph and finds orphan nodes.
-		q2.readInputDataFileAndParseIt();
+		fon.readInputDataFileAndParseIt();
 	}
 
 	/*
