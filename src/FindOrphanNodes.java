@@ -58,7 +58,7 @@ public class FindOrphanNodes {
 	private void readInputDataFileAndParseIt() {
 		
 		System.out.println("Loading input file..\n");
-		String filename = "./datasource/example1_json.txt";
+		String filename = "./datasource/example1_json.txt"; // NM: Why not pass this file name as input to the function
 		JsonReader reader = null;
 		JsonObject graphObject = null;
 		try {
@@ -131,7 +131,7 @@ public class FindOrphanNodes {
         	toIndex = -1;
         	fromIndex = -1;
         	
-        	if(nodeNameToIndexMapping.containsKey(to))
+        	if(nodeNameToIndexMapping.containsKey(to)) // NM: THis is not needed. You can define toIndex and fromIndex as Integer and just go .get on map and check for null below instead of -1
         		toIndex = nodeNameToIndexMapping.get(to);
         	
     		if(nodeNameToIndexMapping.containsKey(from))
@@ -142,10 +142,10 @@ public class FindOrphanNodes {
 	        	if(!adjacencyList.containsKey(toIndex)){
 	        		// Create new entry for the node in the hash map that will store
 	        		// a set of all the end nodes. 
-	        		adjacencyList.put(toIndex, new HashSet<Integer>());
+	        		adjacencyList.put(toIndex, new HashSet<Integer>()); // NM: you can do adjacencyList.put(toIndex, (currentHashSet = new HashSet<Integer>()))
 	        	}
-	        	
-	        	currentHashSet = adjacencyList.get(toIndex);
+	        	// NM: You should explicitly state here that the edge is added as to -> from as per the algorithm
+	        	currentHashSet = adjacencyList.get(toIndex); // NM: this can be added in the else
 	        	currentHashSet.add(fromIndex);
 	        	adjacencyList.put(toIndex, currentHashSet);
         	}else{
@@ -159,6 +159,7 @@ public class FindOrphanNodes {
         
         //printGraph();
         
+		// NM: Refactor the following part in a different function
         //get the deleted edges
         JsonArray deletedEdges = graphObject.getJsonArray("deletedEdge");
         for (JsonValue jsonValue : deletedEdges) {
@@ -221,6 +222,7 @@ public class FindOrphanNodes {
 		}
 	}
 	
+	// NM: The below algorithm description should be at the top of the file as the graphs creation is already done above
 	/*
 	 * Check whether the nodes in the graph are reachable from the root.
 	 * Algorithm functionality: We need to find a path from each node to root
